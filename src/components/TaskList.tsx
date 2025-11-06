@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Task } from '../types';
+import { Task, SubTask } from '../types';
 
 interface TaskListProps {
   tasks: Task[];
   onToggleExpand: (taskId: string) => void;
   onToggleSubTask: (taskId: string, subTaskId: string) => void;
   onReorderTasks: (tasks: Task[]) => void;
+  onReorderSubTasks: (taskId: string, subTasks: SubTask[]) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (task: Task) => void;
 }
@@ -15,11 +16,14 @@ export default function TaskList({
   onToggleExpand,
   onToggleSubTask,
   onReorderTasks,
+  onReorderSubTasks,
   onDeleteTask,
   onEditTask
 }: TaskListProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [draggedSubTaskId, setDraggedSubTaskId] = useState<string | null>(null);
+  const [dragOverSubTaskId, setDragOverSubTaskId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
@@ -56,6 +60,50 @@ export default function TaskList({
   const handleDragEnd = () => {
     setDraggedTaskId(null);
     setDragOverTaskId(null);
+  };
+
+  // 子任务拖拽处理
+  const handleSubTaskDragStart = (e: React.DragEvent, subTaskId: string) => {
+    e.stopPropagation();
+    setDraggedSubTaskId(subTaskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSubTaskDragOver = (e: React.DragEvent, subTaskId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSubTaskId(subTaskId);
+  };
+
+  const handleSubTaskDrop = (e: React.DragEvent, taskId: string, targetSubTaskId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedSubTaskId || draggedSubTaskId === targetSubTaskId) {
+      setDraggedSubTaskId(null);
+      setDragOverSubTaskId(null);
+      return;
+    }
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const draggedIndex = task.subTasks.findIndex(st => st.id === draggedSubTaskId);
+    const targetIndex = task.subTasks.findIndex(st => st.id === targetSubTaskId);
+
+    const newSubTasks = [...task.subTasks];
+    const [draggedSubTask] = newSubTasks.splice(draggedIndex, 1);
+    newSubTasks.splice(targetIndex, 0, draggedSubTask);
+
+    onReorderSubTasks(taskId, newSubTasks);
+    setDraggedSubTaskId(null);
+    setDragOverSubTaskId(null);
+  };
+
+  const handleSubTaskDragEnd = () => {
+    setDraggedSubTaskId(null);
+    setDragOverSubTaskId(null);
   };
 
   const getCompletedPercentage = (task: Task): number => {
@@ -250,6 +298,11 @@ export default function TaskList({
                   {task.subTasks.map(subTask => (
                     <div
                       key={subTask.id}
+                      draggable
+                      onDragStart={(e) => handleSubTaskDragStart(e, subTask.id)}
+                      onDragOver={(e) => handleSubTaskDragOver(e, subTask.id)}
+                      onDrop={(e) => handleSubTaskDrop(e, task.id, subTask.id)}
+                      onDragEnd={handleSubTaskDragEnd}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -257,9 +310,22 @@ export default function TaskList({
                         padding: '8px',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '6px',
-                        marginBottom: '6px'
+                        marginBottom: '6px',
+                        cursor: 'grab',
+                        border: dragOverSubTaskId === subTask.id && draggedSubTaskId !== subTask.id
+                          ? '2px dashed #4ECDC4'
+                          : '2px solid transparent',
+                        opacity: draggedSubTaskId === subTask.id ? 0.5 : 1,
+                        transition: 'all 0.2s'
                       }}
                     >
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#6c757d',
+                        marginRight: '4px'
+                      }}>
+                        ⋮⋮
+                      </span>
                       <span style={{
                         flex: 1,
                         fontSize: '14px',

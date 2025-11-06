@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Task, DayCell } from '../types';
+import { Task, DayCell as DayCellType } from '../types';
+import DayCell from './DayCell';
 
 interface CalendarProps {
   tasks: Task[];
@@ -9,7 +10,7 @@ interface CalendarProps {
 
 export default function Calendar({ tasks, onDayClick, onTaskExtend }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarDays, setCalendarDays] = useState<DayCell[]>([]);
+  const [calendarDays, setCalendarDays] = useState<DayCellType[]>([]);
   const [draggingTask, setDraggingTask] = useState<string | null>(null);
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function Calendar({ tasks, onDayClick, onTaskExtend }: CalendarPr
     const daysInMonth = lastDay.getDate();
     const daysInPrevMonth = prevLastDay.getDate();
 
-    const days: DayCell[] = [];
+    const days: DayCellType[] = [];
 
     // 上个月的日期
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
@@ -240,71 +241,19 @@ export default function Calendar({ tasks, onDayClick, onTaskExtend }: CalendarPr
           const isDragging = isDateInDragRange(dayCell.date);
 
           return (
-            <div
+            <DayCell
               key={index}
-              onClick={() => dayCell.isCurrentMonth && onDayClick(dayCell.date)}
+              date={dayCell.date}
+              day={dayCell.day}
+              isCurrentMonth={dayCell.isCurrentMonth}
+              isToday={isToday}
+              tasks={dayTasks}
+              isDragging={isDragging}
+              draggingColor={getDraggingTaskColor()}
+              onDayClick={() => dayCell.isCurrentMonth && onDayClick(dayCell.date)}
               onMouseEnter={() => handleMouseEnter(dayCell.date)}
-              style={{
-                backgroundColor: isDragging
-                  ? `${getDraggingTaskColor()}40`
-                  : 'white',
-                padding: '8px',
-                cursor: dayCell.isCurrentMonth ? 'pointer' : 'default',
-                position: 'relative',
-                minHeight: '80px',
-                display: 'flex',
-                flexDirection: 'column',
-                opacity: dayCell.isCurrentMonth ? 1 : 0.4,
-                border: isDragging ? `2px dashed ${getDraggingTaskColor()}` : 'none',
-                transition: 'background-color 0.1s'
-              }}
-            >
-              {/* 日期数字 */}
-              <div
-                style={{
-                  fontSize: '14px',
-                  fontWeight: isToday ? 'bold' : 'normal',
-                  color: isToday ? 'white' : dayCell.isCurrentMonth ? '#212529' : '#adb5bd',
-                  marginBottom: '4px',
-                  backgroundColor: isToday ? '#4ECDC4' : 'transparent',
-                  borderRadius: isToday ? '50%' : '0',
-                  width: isToday ? '24px' : 'auto',
-                  height: isToday ? '24px' : 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {dayCell.day}
-              </div>
-
-              {/* 任务标签 */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {dayTasks.map(task => (
-                  <div
-                    key={task.id}
-                    onMouseDown={(e) => handleMouseDown(task.id, dayCell.date, e)}
-                    style={{
-                      backgroundColor: task.color,
-                      color: 'white',
-                      padding: '4px 6px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      cursor: 'grab',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      border: task.isUrgent ? '2px solid #dc3545' : 'none',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
-                    }}
-                    title={task.name}
-                  >
-                    {task.name}
-                  </div>
-                ))}
-              </div>
-            </div>
+              onTaskMouseDown={(taskId, e) => handleMouseDown(taskId, dayCell.date, e)}
+            />
           );
         })}
       </div>
